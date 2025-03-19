@@ -18,7 +18,11 @@ cd $SCRATCH/projects/ECEN743-SP25-DQN
 
 echo "Starting Main!!!"
 python dqn.py \
---run-name dqn
+--run-name dqn \
+--tau 0.005 \
+--batch-size 32 \
+--epsilon-decay 0.999 \
+--lr 1e-4 
 # --no-target-net
 # --replay-sample-type experience
 # --double-dqn

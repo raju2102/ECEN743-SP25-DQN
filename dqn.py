@@ -129,8 +129,8 @@ class QNetwork(nn.Module):
         """
         ###### TYPE YOUR CODE HERE ######
         #################################
-        hidden1 = F.relu(self.fc1(state))
-        hidden2 = F.relu(self.fc2(hidden1))
+        hidden1 = F.leaky_relu(self.fc1(state), negative_slope=0.01)
+        hidden2 = F.leaky_relu(self.fc2(hidden1), negative_slope=0.01)
         q = self.fc3(hidden2)
         return q
 
@@ -345,8 +345,8 @@ if __name__ == "__main__":
     parser.add_argument("--n-episodes", default=2000, type=int)                                                 # maximum number of training episodes
     parser.add_argument("--batch-size", default=64, type=int)                                                   # training batch size
     parser.add_argument("--discount", default=0.99)                                                             # discount factor
-    parser.add_argument("--lr", default=5e-4)                                                                   # learning rate
-    parser.add_argument("--tau", default=0.001)                                                                 # soft update of target network
+    parser.add_argument("--lr", default=5e-4, type=float)                                                                   # learning rate
+    parser.add_argument("--tau", default=0.001, type=float)                                                                 # soft update of target network
     parser.add_argument("--max-size", default=int(1e5),type=int)                                                # experience replay buffer length
     parser.add_argument("--update-freq", default=4, type=int)                                                   # update frequency of target network
     parser.add_argument("--gpu-index", default=0,type=int)		                                                # GPU index
@@ -354,7 +354,7 @@ if __name__ == "__main__":
     # exploration strategy
     parser.add_argument("--epsilon-start", default=1)                                                           # start value of epsilon
     parser.add_argument("--epsilon-end", default=0.01)                                                          # end value of epsilon
-    parser.add_argument("--epsilon-decay", default=0.995)                                                       # decay value of epsilon
+    parser.add_argument("--epsilon-decay", default=0.995, type=float)                                                       # decay value of epsilon
     # additional arguments to create variations of q learning algorithm
     parser.add_argument("--replay-sample-type", choices=['instant', 'experience'], default='experience')        # Type of sampling from replay buffer
     parser.add_argument("--no-target-net", action='store_true')                                                 # Flag to learn without target network
