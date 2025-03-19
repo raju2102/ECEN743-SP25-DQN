@@ -30,6 +30,7 @@ from collections import deque
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from gymnasium.wrappers import RecordVideo
+import imageio
 
 
 
@@ -45,6 +46,7 @@ class ReplayBuffer:
         self.done = np.zeros((max_size, 1))     
         self.batch_size = batch_size
         self.device = torch.device('cuda', index=gpu_index) if torch.cuda.is_available() else torch.device('cpu')
+        self.device = torch.device("mps")
         self.replay_sample_type = replay_sample_type
 
 
@@ -66,6 +68,13 @@ class ReplayBuffer:
         """
         ###### TYPE YOUR CODE HERE ######
         #################################
+        batch_size = self.batch_size 
+        buffer_size = self.size  
+
+        if self.replay_sample_type == "instant":
+            ind = np.arange(max(0, buffer_size - batch_size), buffer_size)
+        elif self.replay_sample_type == "experience":
+            ind = np.random.choice(buffer_size, min(batch_size, buffer_size), replace=False)
 
         return (
             torch.FloatTensor(self.state[ind]).to(self.device),
@@ -88,6 +97,8 @@ class EpsilonDecayer:
         TODO: Write code for decaying the exploration rate using self.epsilon_decay
         and self.epsilon_end. Note that epsilon has been initialized to self.epsilon_start
         """
+        # self.epsilon = self.epsilon + (self.epsilon_end - self.epsilon) * np.exp(-self.epsilon_decay)
+        self.epsilon = max(self.epsilon_end, self.epsilon * self.epsilon_decay)
         ###### TYPE YOUR CODE HERE ######
         #################################
 
@@ -103,6 +114,9 @@ class QNetwork(nn.Module):
         3. The second layer is another hidden layer with 64 units.
         4. The third (output) layer maps to action_dim, producing Q-values for each action.
         """
+        self.fc1 = nn.Linear(state_dim, 64)
+        self.fc2 = nn.Linear(64, 64)
+        self.fc3 = nn.Linear(64, action_dim)
         ###### TYPE YOUR CODE HERE ######
         #################################
         
@@ -115,6 +129,9 @@ class QNetwork(nn.Module):
         """
         ###### TYPE YOUR CODE HERE ######
         #################################
+        hidden1 = F.relu(self.fc1(state))
+        hidden2 = F.relu(self.fc2(hidden1))
+        q = self.fc3(hidden2)
         return q
 
 
@@ -129,6 +146,7 @@ class DQNAgent:
         self.update_freq = update_freq
         self.batch_size = batch_size
         self.device = torch.device('cuda', index=gpu_index) if torch.cuda.is_available() else torch.device('cpu')
+        self.device = torch.device("mps")
         self.no_target_net = no_target_net
         self.double_dqn = double_dqn
         self.t_train = 0
@@ -158,6 +176,17 @@ class DQNAgent:
         1. With probability epsilon, select a random action.
         2. Otherwise, use the Q-network to choose the best action.
         """
+        # if np.random.rand() > epsilon:
+        #     return self.Q(state).cpu().numpy().argmax()
+        # else:
+        #     return np.random.randint(self.action_dim)
+        
+        state_tensor = torch.FloatTensor(state).to(self.device).unsqueeze(0)
+        if np.random.rand() > epsilon:
+            with torch.no_grad():
+                return self.Q(state_tensor).cpu().numpy().argmax() 
+        else:
+            return np.random.randint(self.action_dim)
         ###### TYPE YOUR CODE HERE ######
         ################################# 
 
@@ -175,6 +204,16 @@ class DQNAgent:
         2. Compute the expected Q-values for the chosen actions using the main Q-network.
         3. Compute the loss using Mean Squared Error (MSE) between the expected and target Q-values.
         """
+        if self.double_dqn:
+            best_actions = self.Q(next_states).argmax(dim=1, keepdim=True)
+            max_Q = self.Q_target(next_states).gather(1, best_actions).squeeze(1)
+        else:
+            max_Q = self.Q_target(next_states).max(dim=1)[0]
+
+        target_Q = rewards + discount * max_Q.unsqueeze(1) * (1 - dones.float())
+        # expected_Q = self.Q(states).gather(1, actions.unsqueeze(1)).squeeze(1)
+        expected_Q = self.Q(states).gather(1, actions.view(-1, 1))
+        loss = nn.MSELoss()(expected_Q, target_Q)
         ###### TYPE YOUR CODE HERE ######
         #################################
         self.optimizer.zero_grad()
@@ -189,6 +228,8 @@ class DQNAgent:
         2. Perform the update using tau, this ensures that we do not change the target network drastically
         3. param_target = tau * param_Q + (1 - tau) * param_target
         """
+        for param_Q, param_target in zip(Q.parameters(), Q_target.parameters()):
+            param_target.data.copy_(tau * param_Q.data + (1 - tau) * param_target.data)
         ###### TYPE YOUR CODE HERE ######
         #################################
 
@@ -236,7 +277,25 @@ def plot_rewards(episode_rewards, run_name):
     3. Overlay the smoothed reward curve to visualize training progress more clearly.
     4. Label the plot with appropriate titles and axis names.
     5. Save the plot
-    """
+    """ 
+    rewards = np.array(episode_rewards)
+    window_size = 100
+    smoothed_rewards = np.convolve(rewards, np.ones(window_size) / window_size, mode='valid')
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(rewards, label="Original Rewards", alpha=0.3)
+    plt.plot(range(window_size - 1, len(rewards)), smoothed_rewards, label="Smoothed Rewards (100 episodes)", color='red')
+
+    plt.xlabel("Episodes")
+    plt.ylabel("Total Reward")
+    plt.title(f"Training Progress - {run_name}")
+    plt.legend()
+    plt.grid(True)
+
+    filename = f"{run_name}_rewards_plot.png"
+    plt.savefig(filename)
+    print(f"Plot saved as {filename}")
+    plt.show()
     ###### TYPE YOUR CODE HERE ######
     #################################
 
@@ -250,6 +309,27 @@ def test_loop(agent, env_name, run_name, max_esp_len):
     1. Create a video recording of the agent's performance during testing.
     2. Select an action using the agents policy with the appropriate exploration rate.
     """
+    env = gym.make(env_name, render_mode="rgb_array")
+    state, _ = env.reset()
+    frames = [] 
+    total_reward = 0
+
+    for t in range(max_esp_len):
+        action = agent.select_action(state, epsilon=0.0)
+        next_state, reward, done, truncated, _ = env.step(action)
+        total_reward += reward
+        frames.append(env.render())
+        state = next_state
+
+        if done or truncated:
+            break
+    video_filename = f"{run_name}_test_run.mp4"
+    imageio.mimsave(video_filename, frames, fps=30)
+    
+    print(f"Test run completed. Total reward: {total_reward}")
+    print(f"Video saved as {video_filename}")
+
+    env.close()
     ###### TYPE YOUR CODE HERE ######
     #################################
                 
