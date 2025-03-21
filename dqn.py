@@ -350,7 +350,7 @@ if __name__ == "__main__":
     parser.add_argument("--run-name", required=True, type=str)
     parser.add_argument("--env", default="LunarLander-v3")                                                      # Gymnasium environment name
     parser.add_argument("--seed", default=0, type=int)                                                          # sets Gym, PyTorch and Numpy seeds
-    parser.add_argument("--n-episodes", default=2, type=int)                                                 # maximum number of training episodes
+    parser.add_argument("--n-episodes", default=2000, type=int)                                                 # maximum number of training episodes
     parser.add_argument("--batch-size", default=64, type=int)                                                   # training batch size
     parser.add_argument("--discount", default=0.99)                                                             # discount factor
     parser.add_argument("--lr", default=5e-4, type=float)                                                                   # learning rate
