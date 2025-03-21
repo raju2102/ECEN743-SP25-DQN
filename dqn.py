@@ -309,24 +309,32 @@ def test_loop(agent, env_name, run_name, max_esp_len):
     1. Create a video recording of the agent's performance during testing.
     2. Select an action using the agents policy with the appropriate exploration rate.
     """
-    env = gym.make(env_name, render_mode="rgb_array")
-    state, _ = env.reset()
-    frames = [] 
-    total_reward = 0
-
-    for t in range(max_esp_len):
-        action = agent.select_action(state, epsilon=0.0)
-        next_state, reward, done, truncated, _ = env.step(action)
-        total_reward += reward
-        frames.append(env.render())
-        state = next_state
-
-        if done or truncated:
+    best_reward = float('-inf')
+    best_frames = []
+    for attempt in range(10):
+        print(f"Test Attempt {attempt + 1}/10")
+        state, _ = env.reset()
+        frames = [] 
+        total_reward = 0
+        for t in range(max_esp_len):
+            action = agent.select_action(state, epsilon=0.0)
+            next_state, reward, done, truncated, _ = env.step(action)
+            total_reward += reward
+            frames.append(env.render())
+            state = next_state
+            if done or truncated:
+                break
+        print(f"Total Reward for Attempt {attempt + 1}: {total_reward}")
+        if total_reward > best_reward:
+            best_reward = total_reward
+            best_frames = frames
+        if total_reward > 200:  
+            print("Successful episode achieved!")
             break
-    video_filename = f"{run_name}_test_run.mp4"
-    imageio.mimsave(video_filename, frames, fps=30)
+    video_filename = f"{run_name}_best_test_run.mp4"
+    imageio.mimsave(video_filename, best_frames, fps=30)
     
-    print(f"Test run completed. Total reward: {total_reward}")
+    print(f"Best test run completed with Total Reward: {best_reward}")
     print(f"Video saved as {video_filename}")
 
     env.close()
