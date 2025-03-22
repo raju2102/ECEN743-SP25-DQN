@@ -26,7 +26,7 @@ python3 dqn_breakout.py \
 --double-dqn \
 --n-episodes 10000 \
 --epoch-offset 7000 \
---epsilon-start 0.5
+--epsilon-start 0.65
 # --no-target-net
 # --replay-sample-type experience
 # --double-dqn
