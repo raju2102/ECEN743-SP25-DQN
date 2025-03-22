@@ -114,7 +114,7 @@ class ReplayBuffer:
         self.done = np.zeros((max_size, 1))     
         self.batch_size = batch_size
         self.device = torch.device('cuda', index=gpu_index) if torch.cuda.is_available() else torch.device('cpu')
-        self.device = torch.device("mps")
+        # self.device = torch.device("mps")
         self.replay_sample_type = replay_sample_type
 
 
@@ -211,7 +211,7 @@ class DQNAgent:
         self.update_freq = update_freq
         self.batch_size = batch_size
         self.device = torch.device('cuda', index=gpu_index) if torch.cuda.is_available() else torch.device('cpu')
-        self.device = torch.device("mps")
+        # self.device = torch.device("mps")
         self.no_target_net = no_target_net
         self.double_dqn = double_dqn
         self.t_train = 0
