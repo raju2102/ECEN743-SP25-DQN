@@ -313,6 +313,15 @@ def train_loop(args):
         **vars(args)
     )
     epsilondecayer = EpsilonDecayer(args.epsilon_start, args.epsilon_end, args.epsilon_decay)
+    offset = 0
+    if args.epoch_offset:
+        try:
+            offset = int(args.epoch_offset)
+            checkpoint_path = os.path.join(args.run_name, f"checkpoint_ep{offset}.pth")
+            agent.Q.load_state_dict(torch.load(checkpoint_path, map_location=agent.device))
+            print(f"Loaded checkpoint from {checkpoint_path}")
+        except Exception as e:
+            print(f"Failed to load checkpoint: {e}")
 
     episode_rewards = []
     episode_pbar = trange(args.n_episodes)
@@ -332,9 +341,10 @@ def train_loop(args):
         episode_rewards.append(curr_reward)
         episode_pbar.set_description(f'Episodic Reward {curr_reward:8.2f}')
         if (ep + 1) % 1000 == 0:
-            checkpoint_path = os.path.join(args.run_name, f"checkpoint_ep{ep+1}.pth")
+            checkpoint_ep = offset + ep + 1
+            checkpoint_path = os.path.join(args.run_name, f"checkpoint_ep{checkpoint_ep}.pth")
             torch.save(agent.Q.state_dict(), checkpoint_path)
-            print(f"Checkpoint saved at episode {ep+1} : {checkpoint_path}")
+            print(f"Checkpoint saved at episode {checkpoint_ep} : {checkpoint_path}")
     env.close()
 
     return agent, episode_rewards
@@ -405,7 +415,7 @@ def test_loop(agent, env_name, run_name, max_esp_len):
             best_reward = total_reward
             best_frames = frames
 
-        if total_reward > 10:  
+        if total_reward > 100:  
             print("Successful episode achieved!")
             break
 
@@ -445,6 +455,7 @@ if __name__ == "__main__":
     parser.add_argument("--replay-sample-type", choices=['instant', 'experience'], default='experience')        # Type of sampling from replay buffer
     parser.add_argument("--no-target-net", action='store_true')                                                 # Flag to learn without target network
     parser.add_argument("--double-dqn", action='store_true')                                                    # Flag to learn with double dqn
+    parser.add_argument("--epoch-offset", required=False, type=str)
     args = parser.parse_args()
 
     if args.double_dqn:
