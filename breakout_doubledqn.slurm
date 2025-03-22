@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:a30:1
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 #SBATCH --output=%j.log
 
 ml purge
