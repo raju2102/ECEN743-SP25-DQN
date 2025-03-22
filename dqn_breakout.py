@@ -395,7 +395,7 @@ def test_loop(agent, env_name, run_name, max_esp_len):
     best_reward = float('-inf')
     best_frames = []
 
-    for attempt in range(10):
+    for attempt in range(20):
         print(f"Test Attempt {attempt + 1}/10")
         state, _ = env.reset()
         frames = []
@@ -474,6 +474,20 @@ if __name__ == "__main__":
 
     # plotting train rewards
     plot_rewards(train_episode_rewards, args.run_name)
+    
+    #UNCOMMENT CODE BELOW TO TEST WITH PARTICULAR WEIGHT FILE
+    # env = gym.make(args.env, render_mode="rgb_array")
+    # env = FireResetWrapper(env)
+    # env = GrayscaleObservation(env)              
+    # env = FrameStackRepeatAction(env, 4)         
+    # print(env.observation_space.shape) 
+    # agent = DQNAgent(
+    #     state_dim=env.observation_space.shape,
+    #     action_dim=env.action_space.n,
+    #     **vars(args)
+    # )
+    # checkpoint_path = os.path.join(args.run_name, f"checkpoint_ep{7000}.pth")
+    # agent.Q.load_state_dict(torch.load(checkpoint_path, map_location=agent.device))
 
     # testing agent
     test_loop(agent, args.env, args.run_name, args.max_esp_len)
