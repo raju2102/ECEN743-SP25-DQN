@@ -331,6 +331,7 @@ def train_loop(args):
         for _ in range(args.max_esp_len):
             action = agent.select_action(state, epsilondecayer.epsilon)
             n_state,reward,terminated,truncated,_ = env.step(action)
+            reward = np.sign(reward)
             done = terminated or truncated
             agent.step(state,action,reward,n_state,done)
             state = n_state
@@ -446,7 +447,7 @@ if __name__ == "__main__":
     parser.add_argument("--max-size", default=int(1e5),type=int)                                                # experience replay buffer length
     parser.add_argument("--update-freq", default=4, type=int)                                                   # update frequency of target network
     parser.add_argument("--gpu-index", default=0,type=int)		                                                # GPU index
-    parser.add_argument("--max-esp-len", default=1000, type=int)                                                # maximum steps in an episode
+    parser.add_argument("--max-esp-len", default=3000, type=int)                                                # maximum steps in an episode
     # exploration strategy
     parser.add_argument("--epsilon-start", default=1)                                                           # start value of epsilon
     parser.add_argument("--epsilon-end", default=0.01)                                                          # end value of epsilon

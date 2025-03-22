@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --job-name=RunDQN
-#SBATCH --time=08:00:00
+#SBATCH --time=06:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:a30:1
-#SBATCH --mem=32G
+#SBATCH --gres=gpu:a40:1
+#SBATCH --mem=64G
 #SBATCH --output=%j.log
 
 ml purge
@@ -20,12 +20,11 @@ echo "Starting Main!!!"
 python3 dqn_breakout.py \
 --run-name doubledqn \
 --tau 0.005 \
---epsilon-decay 0.999 \
+--epsilon-decay 0.995 \
 --lr 1e-4 \
 --env "ALE/Breakout-v5" \
 --double-dqn \
---n-episodes 50000 \
---epoch-offset 4000
+--n-episodes 10000 
 # --no-target-net
 # --replay-sample-type experience
 # --double-dqn
