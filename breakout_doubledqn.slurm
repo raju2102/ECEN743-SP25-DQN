@@ -20,7 +20,6 @@ echo "Starting Main!!!"
 python3 dqn_breakout.py \
 --run-name doubledqn \
 --tau 0.005 \
---batch-size 128 \
 --epsilon-decay 0.999 \
 --lr 1e-4 \
 --env "ALE/Breakout-v5" \
