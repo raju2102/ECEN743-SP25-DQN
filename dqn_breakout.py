@@ -449,8 +449,8 @@ if __name__ == "__main__":
     parser.add_argument("--gpu-index", default=0,type=int)		                                                # GPU index
     parser.add_argument("--max-esp-len", default=3000, type=int)                                                # maximum steps in an episode
     # exploration strategy
-    parser.add_argument("--epsilon-start", default=1)                                                           # start value of epsilon
-    parser.add_argument("--epsilon-end", default=0.01)                                                          # end value of epsilon
+    parser.add_argument("--epsilon-start", default=1, type=float)                                                           # start value of epsilon
+    parser.add_argument("--epsilon-end", default=0.01, type=float)                                                          # end value of epsilon
     parser.add_argument("--epsilon-decay", default=0.995, type=float)                                                       # decay value of epsilon
     # additional arguments to create variations of q learning algorithm
     parser.add_argument("--replay-sample-type", choices=['instant', 'experience'], default='experience')        # Type of sampling from replay buffer
