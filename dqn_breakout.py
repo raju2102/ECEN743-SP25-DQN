@@ -103,10 +103,17 @@ class FrameStackRepeatAction(ObservationWrapper):
 
 
 class ReplayBuffer:
-    def __init__(self, state_dim, action_dim, max_size, batch_size, gpu_index, replay_sample_type):
+    def __init__(self, state_dim, action_dim, max_size, batch_size, gpu_index, replay_sample_type, alpha=0.6, beta=0.4, beta_increment=1e-4):
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
+        
+        #PRIORITIZED REPLAY CHANGES
+        self.alpha = alpha
+        self.beta = beta
+        self.beta_increment = beta_increment
+        self.priorities = np.zeros((max_size,), dtype=np.float32)
+        
         self.state = np.zeros((max_size, *state_dim), dtype=np.float32)
         self.action = np.zeros((max_size, action_dim))
         self.next_state = np.zeros((max_size, *state_dim), dtype=np.float32)
@@ -119,6 +126,10 @@ class ReplayBuffer:
 
 
     def add(self, state, action,reward,next_state, done):
+        #PER CHANGES
+        max_priority = self.priorities.max() if self.size > 0 else 1.0
+        self.priorities[self.ptr] = max_priority
+        
         self.state[self.ptr] = state
         self.action[self.ptr] = action
         self.next_state[self.ptr] = next_state
@@ -142,16 +153,30 @@ class ReplayBuffer:
         if self.replay_sample_type == "instant":
             ind = np.arange(max(0, buffer_size - batch_size), buffer_size)
         elif self.replay_sample_type == "experience":
-            ind = np.random.choice(buffer_size, min(batch_size, buffer_size), replace=False)
+            if self.size == self.max_size:
+                priorities = self.priorities
+            else:
+                priorities = self.priorities[:self.ptr]
+            scaled_priorities = priorities ** self.alpha
+            probs = scaled_priorities / scaled_priorities.sum()
+            ind = np.random.choice(len(probs), batch_size, p=probs)
+
+            weights = (len(probs) * probs[ind]) ** (-self.beta)
+            weights /= weights.max()
+            self.beta = min(1.0, self.beta + self.beta_increment)
 
         return (
             torch.FloatTensor(self.state[ind]).to(self.device),
             torch.FloatTensor(self.action[ind]).long().to(self.device),
             torch.FloatTensor(self.reward[ind]).to(self.device),
             torch.FloatTensor(self.next_state[ind]).to(self.device),
-            torch.BoolTensor(self.done[ind]).to(self.device)
+            torch.BoolTensor(self.done[ind]).to(self.device),
+            torch.FloatTensor(weights).unsqueeze(1).to(self.device),
+            ind 
         )
     
+    def update_priorities(self, indices, priorities):
+        self.priorities[indices] = priorities
 
 
 class EpsilonDecayer:
@@ -220,8 +245,8 @@ class DQNAgent:
         self.Q_target = QNetwork(state_dim, action_dim).to(self.device)
         self.optimizer = optim.Adam(self.Q.parameters(), lr=self.lr)
 
-        self.memory = ReplayBuffer(state_dim,1,max_size,self.batch_size,gpu_index,replay_sample_type)
-        
+        # self.memory = ReplayBuffer(state_dim,1,max_size,self.batch_size,gpu_index,replay_sample_type)
+        self.memory = ReplayBuffer(state_dim, 1, max_size, batch_size, gpu_index, replay_sample_type)
 
     def step(self, state, action, reward, next_state, done):
         self.memory.add(state, action, reward, next_state, done)       
@@ -257,7 +282,7 @@ class DQNAgent:
 
 
     def learn(self, experiences, discount):
-        states, actions, rewards, next_states, dones = experiences
+        states, actions, rewards, next_states, dones, weights, indices = experiences
         """
         TODO
         1. Compute the target Q-values based on the Bellman equation:
@@ -278,12 +303,16 @@ class DQNAgent:
         target_Q = rewards + discount * max_Q.unsqueeze(1) * (1 - dones.float())
         # expected_Q = self.Q(states).gather(1, actions.unsqueeze(1)).squeeze(1)
         expected_Q = self.Q(states).gather(1, actions.view(-1, 1))
-        loss = nn.MSELoss()(expected_Q, target_Q)
+        per_sample_loss = F.smooth_l1_loss(expected_Q, target_Q, reduction='none')
+        loss = (per_sample_loss * weights).mean()
         ###### TYPE YOUR CODE HERE ######
         #################################
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        
+        td_errors = torch.abs(expected_Q - target_Q).detach().cpu().numpy().flatten()
+        self.memory.update_priorities(indices, td_errors + 1e-5)
 
 
     def target_update(self, Q, Q_target, tau):
@@ -331,7 +360,7 @@ def train_loop(args):
         for _ in range(args.max_esp_len):
             action = agent.select_action(state, epsilondecayer.epsilon)
             n_state,reward,terminated,truncated,_ = env.step(action)
-            reward = np.sign(reward)
+            # reward = np.sign(reward)
             done = terminated or truncated
             agent.step(state,action,reward,n_state,done)
             state = n_state
