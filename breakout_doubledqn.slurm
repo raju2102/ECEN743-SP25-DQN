@@ -24,7 +24,7 @@ python3 dqn_breakout.py \
 --lr 2.5e-4 \
 --env "ALE/Breakout-v5" \
 --double-dqn \
---n-episodes 1000 \
+--n-episodes 10000 \
 --epoch-offset 17000 \
 --epsilon-start 1.00 \
 --epsilon-end 0.05
