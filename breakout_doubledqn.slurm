@@ -19,15 +19,15 @@ cd $SCRATCH/projects/ECEN743-SP25-DQN
 echo "Starting Main!!!"
 python3 dqn_breakout.py \
 --run-name doubledqn \
---tau 0.005 \
+--tau 0.01 \
 --epsilon-decay 0.9995 \
 --lr 1e-4 \
 --env "ALE/Breakout-v5" \
 --double-dqn \
 --n-episodes 10000 \
 --epoch-offset 16000 \
---epsilon-start 0.05 \
---epsilon-end 0.001
+--epsilon-start 0.2 \
+--epsilon-end 0.01
 # --no-target-net
 # --replay-sample-type experience
 # --double-dqn
