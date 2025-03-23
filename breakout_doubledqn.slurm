@@ -21,12 +21,12 @@ python3 dqn_breakout.py \
 --run-name doubledqn \
 --tau 0.01 \
 --epsilon-decay 0.9995 \
---lr 1e-4 \
+--lr 2.5e-4 \
 --env "ALE/Breakout-v5" \
 --double-dqn \
 --n-episodes 10000 \
 --epoch-offset 16000 \
---epsilon-start 0.2 \
+--epsilon-start 0.5 \
 --epsilon-end 0.01
 # --no-target-net
 # --replay-sample-type experience
