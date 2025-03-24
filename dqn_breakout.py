@@ -103,7 +103,7 @@ class FrameStackRepeatAction(ObservationWrapper):
 
 
 class ReplayBuffer:
-    def __init__(self, state_dim, action_dim, max_size, batch_size, gpu_index, replay_sample_type, alpha=0.6, beta=0.4, beta_increment=1e-4):
+    def __init__(self, state_dim, action_dim, max_size, batch_size, gpu_index, replay_sample_type, alpha=0.6, beta=0.5, beta_increment=1e-4):
         self.max_size = max_size
         self.ptr = 0
         self.size = 0
